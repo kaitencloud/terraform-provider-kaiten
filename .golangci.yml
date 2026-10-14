@@ -1,0 +1,59 @@
+version: "2"
+
+formatters:
+  enable:
+    - gofumpt
+    - gci
+
+linters:
+  default: none
+  enable:
+    - copyloopvar
+    - dupword
+    - errcheck
+    - gosec
+    - govet
+    - ineffassign
+    - intrange
+    - misspell
+    # nolintlint does not find code defects -- it polices the suppressions. The tree
+    # carries no //nolint at all today, and that is the state worth keeping: every
+    # future one now has to name its linter and say why, so a suppression is a
+    # reviewable decision rather than a silent hole in the checks above.
+    - nolintlint
+    - revive
+    - staticcheck
+    - unused
+  settings:
+    gosec:
+      excludes:
+        - G101
+        - G404
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+    staticcheck:
+      checks:
+        - "all"
+  exclusions:
+    generated: lax
+    presets:
+      - std-error-handling
+    rules:
+      # Acceptance tests follow HashiCorp's naming grammar --
+      # TestAcc{Resource}_{scenario}, testAcc{Resource}Config_{scenario} --
+      # which every Terraform provider shares and the underscore is part of.
+      - path: _test\.go
+        linters: [revive]
+        text: "var-naming: don't use underscores"
+      - path: _test\.go
+        linters: [staticcheck]
+        text: "ST1003: should not use underscores"
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+run:
+  timeout: 3m

@@ -1,0 +1,49 @@
+name: Bug report
+description: The provider does not behave as documented
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please search the existing issues first, and remove
+        tokens, keys and other secrets from anything you paste below.
+  - type: input
+    id: provider-version
+    attributes:
+      label: Provider version
+      description: The `kaitencloud/kaiten` version from `terraform version`.
+    validations:
+      required: true
+  - type: input
+    id: terraform-version
+    attributes:
+      label: Terraform version
+      description: The output of `terraform version`, first line.
+    validations:
+      required: true
+  - type: input
+    id: affected
+    attributes:
+      label: Affected resources or data sources
+      placeholder: kaiten_deployment_zone
+  - type: textarea
+    id: config
+    attributes:
+      label: Terraform configuration
+      description: The smallest configuration that reproduces the problem.
+      render: terraform
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you ran, what you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Debug output
+      description: Relevant output of the failing command run with `TF_LOG=DEBUG`. Secrets removed.
+      render: shell

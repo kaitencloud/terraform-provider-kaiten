@@ -1,0 +1,38 @@
+version: "3"
+
+tasks:
+  default:
+    cmds:
+      - task --list
+
+  build:
+    desc: Build the provider
+    cmds:
+      - go build -v ./...
+
+  install:
+    desc: Install the provider binary into GOBIN, for dev_overrides
+    cmds:
+      - go install -v ./...
+
+  lint:
+    desc: Run golangci-lint
+    cmds:
+      - golangci-lint run ./...
+
+  generate:
+    desc: Format the examples and regenerate docs/
+    cmds:
+      - go generate ./...
+
+  test:
+    desc: Run the unit tests
+    cmds:
+      - go test -race -shuffle=on -cover ./...
+
+  testacc:
+    desc: Run the acceptance tests against KAITEN_BASE_URL (creates real deployment zones)
+    env:
+      TF_ACC: "1"
+    cmds:
+      - go test -v -cover -timeout 10m ./internal/provider/ {{.CLI_ARGS}}

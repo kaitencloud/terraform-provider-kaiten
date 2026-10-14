@@ -1,0 +1,35 @@
+---
+page_title: "Provider: Kaiten"
+description: |-
+  Manage Kaiten infrastructure through the Kaiten Core API.
+---
+
+# Kaiten Provider
+
+The Kaiten provider manages [Kaiten](https://kaiten.sh) infrastructure through the Kaiten
+Core API. It covers deployment zones: the regions and environments instances are deployed to.
+
+## Authentication
+
+The provider needs the base URL of a Kaiten Core API and an organization-scoped API token
+(`ksh_...`). It resolves each one separately, from the first of these sources that sets it:
+
+1. The `base_url` and `auth_token` arguments of the provider block.
+2. The `KAITEN_BASE_URL` and `KAITEN_AUTH_TOKEN` environment variables.
+3. The `base_url` and `auth_token` keys of the Kaiten CLI configuration file, `kaiten/config.yaml`
+   under the user configuration directory (`~/.config` on Linux, `~/Library/Application Support`
+   on macOS, `%AppData%` on Windows).
+
+These are the variables and the file the [Kaiten CLI](https://github.com/kaitencloud/cli)
+reads, so a machine where `kaiten` works needs no further setup. Keep the token out of
+configuration where you can.
+
+## Example Usage
+
+{{ tffile "examples/provider/provider.tf" }}
+
+With explicit settings:
+
+{{ tffile "examples/provider/provider-explicit.tf" }}
+
+{{ .SchemaMarkdown | trimspace }}

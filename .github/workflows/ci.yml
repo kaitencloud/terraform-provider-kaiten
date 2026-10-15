@@ -1,0 +1,118 @@
+name: CI
+
+# The default-branch ruleset of Kaiten's Go repositories requires three checks,
+# named `lint`, `build` and `test`. Each job below reports one of them;
+# `acceptance` runs against a live Kaiten API when one is configured.
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # The newest patch of the minor version go.mod declares, so the build
+      # picks up stdlib security fixes that govulncheck would otherwise report.
+      # The provider ships as a binary, so unlike the SDK it can follow the
+      # newest Go release: golang.org/x/net's fixes already require it.
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.x"
+          cache-dependency-path: go.sum
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+          args: --timeout=5m ./...
+
+      - name: Verify module metadata
+        run: go mod tidy && git diff --exit-code -- go.mod go.sum
+
+      # The docs and the formatted examples are generated from the schema; a
+      # change to either without regenerating fails here.
+      - name: Verify generated documentation
+        run: |
+          go generate ./...
+          git diff --exit-code -- docs examples || {
+            echo "::error::docs/ or examples/ are stale. Run 'task generate' and commit the result."
+            exit 1
+          }
+
+      - name: Validate documentation
+        run: go tool tfplugindocs validate --provider-name kaiten
+
+      - name: Vulnerability scan
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.x"
+          cache-dependency-path: go.sum
+      - name: Build
+        run: go build -v ./...
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.x"
+          cache-dependency-path: go.sum
+      # Some unit tests drive the Terraform CLI to check plan-time validation.
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      - name: Test
+        run: go test -race -shuffle=on -cover ./...
+
+  # Runs only when the repository variable KAITEN_ACCEPTANCE is "true", with
+  # the KAITEN_BASE_URL and KAITEN_AUTH_TOKEN secrets pointing at a disposable
+  # organization: the tests create and delete real deployment zones there.
+  acceptance:
+    name: acceptance (Terraform ${{ matrix.terraform }})
+    if: vars.KAITEN_ACCEPTANCE == 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        terraform: ["1.5.*", "1.15.*"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.x"
+          cache-dependency-path: go.sum
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ matrix.terraform }}
+          terraform_wrapper: false
+      - name: Acceptance tests
+        env:
+          TF_ACC: "1"
+          KAITEN_BASE_URL: ${{ secrets.KAITEN_BASE_URL }}
+          KAITEN_AUTH_TOKEN: ${{ secrets.KAITEN_AUTH_TOKEN }}
+        run: go test -v -cover -timeout 10m ./internal/provider/

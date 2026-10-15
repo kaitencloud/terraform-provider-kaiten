@@ -1,0 +1,18 @@
+# Build output
+/terraform-provider-kaiten
+/dist/
+*.exe
+
+# Terraform working files from running the examples locally
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+
+# Test output
+coverage.out
+
+.DS_Store
+.idea/
+.vscode/
